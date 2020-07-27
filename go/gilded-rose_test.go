@@ -103,3 +103,13 @@ func Test_BackstagePassesQuality(t *testing.T) {
 	})
 
 }
+
+func Test_AgedBrieIncreaseQualityOneTime(t *testing.T) {
+	t.Run("Expired", func(t *testing.T) {
+		var items = []*Item{
+			{AgedBrie, 0, 1},
+		}
+		UpdateQuality(items)
+		assert.Equal(t, 2, items[0].quality)
+	})
+}

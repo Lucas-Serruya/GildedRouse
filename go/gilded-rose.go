@@ -17,64 +17,129 @@ const Sulfuras = "Sulfuras, Hand of Ragnaros"
 
 func UpdateQuality(items []*Item) {
 	for i := 0; i < len(items); i++ {
+		itemzz := ItemFactory(items[i])
+		itemzz.UpdateSellIn()
+		//items[i].updateQuality()
+	}
+}
 
-		item := items[i]
+type Itemzz interface {
+	UpdateSellIn()
+}
 
-		if item.name != AgedBrie && item.name != Backstage {
-			if item.quality > 0 {
-				if item.name != Sulfuras {
-					item.decreaseQuality()
-				}
-			}
-		} else {
-			if item.quality < 50 {
-				item.increaseQuality()
-				if item.name == Backstage {
-					if item.sellIn < 11 {
-						item.increaseQuality()
-					}
-					if item.sellIn < 6 {
-						item.increaseQuality()
-					}
-				}
-			}
-		}
+type AgedBrieItem struct {
+	Item *Item
+}
 
-		if item.name != Sulfuras {
-			item.decreaseSellIn()
-		}
+func (a AgedBrieItem) UpdateSellIn() {
+	a.Item.updateQuality()
+}
 
-		if item.sellIn < 0 {
-			if item.name != AgedBrie {
-				if item.name != Backstage {
-					if item.quality > 0 && item.name != Sulfuras {
-						item.decreaseQuality()
-					}
-				} else {
-					item.expire()
-				}
-			} else {
-				if item.quality < 50 {
-					item.increaseQuality()
-				}
-			}
-		}
+type SulfurasItem struct {
+	Item *Item
+}
+
+func (s SulfurasItem) UpdateSellIn() {
+	panic("implement me")
+}
+
+type BackstageItem struct {
+	Item *Item
+}
+
+func (b BackstageItem) UpdateSellIn() {
+	panic("implement me")
+}
+
+type DefaultItem struct {
+	Item *Item
+}
+
+func (d DefaultItem) UpdateSellIn() {
+	d.Item.updateQuality()
+}
+
+var _ Itemzz = (*AgedBrieItem)(nil)
+var _ Itemzz = (*SulfurasItem)(nil)
+var _ Itemzz = (*BackstageItem)(nil)
+var _ Itemzz = (*DefaultItem)(nil)
+
+func ItemFactory(item *Item) Itemzz {
+	switch item.name {
+	case AgedBrie:
+		return &AgedBrieItem{Item: item}
+	/*case Sulfuras:
+		return &SulfurasItem{Item: item}
+	case Backstage:
+		return &BackstageItem{Item: item}*/
+	default:
+		return &DefaultItem{Item: item}
+	}
+}
+
+func (item *Item) updateQuality() {
+	item.decreaseSellIn()
+
+	if item.agesOverTime() {
+		item.increaseQuality()
+	} else {
+		item.decreaseQuality()
 	}
 
+	if item.hasExpired() {
+		if item.name == Backstage {
+			item.resetQuality()
+		} else if item.name != AgedBrie {
+			item.decreaseQuality()
+		}
+	}
+}
+
+func (item *Item) agesOverTime() bool {
+	return item.name == AgedBrie || item.name == Backstage
+}
+
+func (item *Item) canDecreaseQuality() bool {
+	return item.quality > 0 && item.name != Sulfuras
+}
+
+func (item *Item) canIncreaseQuality() bool {
+	return item.quality < 50 && item.name != Sulfuras
+}
+
+func (item *Item) hasExpired() bool {
+	return item.sellIn < 0
 }
 
 func (item *Item) decreaseSellIn() {
-	item.sellIn = item.sellIn - 1
+	if item.name == Sulfuras {
+		return
+	}
+	item.sellIn--
 }
 
-func (item *Item) expire() {
+func (item *Item) resetQuality() {
 	item.quality = 0
 }
 
 func (item *Item) increaseQuality() {
-	item.quality = item.quality + 1
+	if !item.canIncreaseQuality() {
+		return
+	}
+	if item.name == Backstage {
+		if item.sellIn < 11 {
+			item.quality++
+		}
+		if item.sellIn < 6 {
+			item.quality++
+		}
+	}
+	item.quality++
 }
 
 func (item *Item) decreaseQuality() {
-	item.quality = item.quality - 1
+	if !item.canDecreaseQuality() {
+		return
+	}
+	item.quality--
 }
